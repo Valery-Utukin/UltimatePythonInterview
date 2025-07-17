@@ -12,6 +12,12 @@ class User(BaseModel):
     email: EmailStr
 
 
+class UserPatch(BaseModel):
+    name: str | None = None
+    age: int | None = None
+    email: EmailStr | None = None
+
+
 users = {
     1: {
         'name': "Valery",
@@ -64,7 +70,7 @@ async def add_user(user: User):
 
 @app.put("/users/{user_id}",
          tags=["Пользователи"],
-         summary="Обновить данные пользователя",
+         summary="Полностью обновить пользователя",
          )
 async def update_user(user_id: int, updated_user: User):
     if user_id in users:
@@ -74,6 +80,22 @@ async def update_user(user_id: int, updated_user: User):
             'email': str(updated_user.email)  # Приводим к str в явном виде, чтобы PyCharm не ругался на тип EmailStr
         }
         return {'success': True, 'message': f"User (id={user_id}) updated"}
+    else:
+        raise HTTPException(status_code=404, detail="User not found")
+
+
+@app.patch("/users/{user_id}",
+           tags=["Пользователи"],
+           summary="Обновить поля пользователя",
+           )
+async def patch_user(user_id: int, update: UserPatch):
+    update_data = update.dict(exclude_unset=True)
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields provided for update")
+    if user_id in users:
+        for key, value in update_data.items():
+            users[user_id][key] = value
+        return {'success': True, "updated_data": users[user_id]}
     else:
         raise HTTPException(status_code=404, detail="User not found")
 
